@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Home</title>
+  </head>
+
+  <body>
+    <header>
+      <h1>CodeSnippet</h1>
+      <nav>
+        <a href='/home'>Home</a>
+        <a href='/new'>Create New</a>
+        <a href='/explore'>Explore All</a>
+        <a href='/language'>Explore Languages</a>
+        <a href='/tags'>Explore Tags</a>
+      </nav>
+    </header>
+
+    {{ #languageSearch }}
+    <div>
+      <h1>Explore Snippets by Language</h1>
+      <form method="post" action="/language">
+        <input type="text" name="language_search" placeholder="Enter language">
+        <input type="submit" value="Search">
+      </form>
+    </div>
+    {{ /languageSearch}}
+
+    {{ #tagsSearch }}
+    <div>
+      <h1>Explore Snippets by Tags</h1>
+      <form method="post" action="/tags">
+        <input type="text" name="tags_search" placeholder="Enter tag">
+        <input type="submit" value="Search">
+      </form>
+    </div>
+    {{ /tagsSearch}}
+  </body>
+</html>

@@ -5,6 +5,52 @@
   </head>
 
   <body>
-      <h1>Welcome to Snippet Organizer</h1>
+    <header>
+      <h1>CodeSnippet</h1>
+      <nav>
+        <a href='/home'>Home</a>
+        <a href='/new'>Create New</a>
+        <a href='/explore'>Explore All</a>
+        <a href='/language'>Explore Languages</a>
+        <a href='/tags'>Explore Tags</a>
+      </nav>
+    </header>
+
+    {{ #hasSnippets }}
+    <h1>Welcome back {{ member.firstName }}!</h1>
+
+    <div>
+      <h2>Your Snippets</h2>
+      {{ #snippets }}
+      <ul>
+        <li>
+          {{ title }}
+        </li>
+      </ul>
+      {{ /snippets }}
+    </div>
+
+    <div>
+      <a href="/new">
+        <button>Create New Snippet</button>
+      </a>
+      <a href="/explore">
+        <button>Explore All Snippets</button>
+      </a>
+    </div>
+    {{ /hasSnippets}}
+
+    {{ #firstTime }}
+    <h1>Welcome {{ member.firstName }}</h1>
+    <h2>Get started here!</h2>
+    <div>
+      <a href="/new">
+        <button>Create Your First Snippet</button>
+      </a>
+      <a href="/explore">
+        <button>Explore All Snippets</button>
+      </a>
+    </div>
+    {{ /firstTime }}
   </body>
 </html>
