@@ -5,6 +5,10 @@ const mongoose = require('mongoose');
 const bodyparser = require('body-parser');
 const session = require('express-session');
 
+// require schemas
+const Members = require('./schemas/members');
+const Snippets = require('./schemas/snippets')
+
 // configure server
 const app = express();
 
@@ -21,62 +25,29 @@ app.engine('mustache', mustache());
 app.set('views', './views');
 app.set('view engine', 'mustache');
 
-// temporary storage for schemas
-let members = [{
-  firstName: 'John',
-  lastName: 'Doe',
-  username: 'test',
-  password: 'abc',
-}]
-
-let snippets = [{
-  title: 'New Snippet',
-  code: `app.listen(4000, function () {
-        console.log('snip, snip');
-        });`,
-  notes: 'here is a snippet',
-  language: 'JavaScript',
-  tags: 'no',
-  author: 'test',
-}]
+/* ******** CONNECT DATABASE ******** */
+mongoose.connect('mongodb://localhost:27017/snippets');
 
 /* ******** REGISTRATION/LOGIN ******** */
 // login get route
-app.get('/login', function (req, res) {
+app.get('/', function (req, res) {
   res.render('login');
 });
 // login post route
 app.post('/login', function (req, res) {
-  // define constant variables for username and password
-  const username = req.body.username;
-  const password = req.body.password;
-
-  // id for members
-  let member = null;
-
-  // is username valid?
-  // if so is password a match?
-  for (let i = 0; i < members.length; i++) {
-    if (username === members[i].username &&
-        password === members[i].password) {
-          member = members[i];
-        }
-    }
-
-    // if it is a match redirect them to the home screen otherwise return error message
-    if ( member !== null) {
-      // create session
-      req.session.who = member;
-
-      res.redirect('/home');
-    } else {
-      console.log('login failed');
-      console.log(username);
-      console.log(password);
+  Members.findOne(
+    { 'username': req.body.username, 'password': req.body.password },
+  function(err, member) {
+    if (err) {
       res.render('login', {
         loginError: true,
       });
+    } else {
+      req.session.who = member;
+      console.log(req.session.who)
+      res.redirect('/home');
     }
+  })
 });
 
 // registration get route
@@ -86,75 +57,91 @@ app.get('/register', function (req, res) {
 
 // registration post route
 app.post('/register', function (req, res) {
-  const profile = req.body;
+  // let member = null;
 
-  // set up session for new member
-  req.session.who = {
-    firstName: profile.firstname,
-    lastName: profile.lastname,
-    username: profile.username,
-    password: profile.password,
-  }
-
-  // push to members array
-  members.push(req.session.who);
-
-  console.log(members)
-  res.redirect('/home');
+  Members.create({
+    firstname: req.body.firstname,
+    lastname: req.body.lastname,
+    username: req.body.username,
+    password: req.body.password
+  })
+    .then(function (members) {
+      req.session.who = members;
+      console.log(req.session.who);
+      console.log('registration successful');
+      res.redirect('/home');
+    })
+    .catch(function (err) {
+      console.log('registration failed');
+      console.log(err)
+      res.send('there was an error with your registration');
+    })
 });
 
 // home get route
 app.get('/home', function (req, res) {
-  for (let i = 0; i < snippets.length; i++ ) {
-    if ( snippets[i].author === req.session.who.username ) {
-        res.render('home', {
-          hasSnippets: true,
-          snippets: snippets,
-        });
-    } else {
+  Snippets.find({ author: req.session.who.username })
+    .then(function (snippets) {
+    if ( req.session.who !== null && snippets[0].author === req.session.who.username) {
+          res.render('home', {
+            hasSnippets: true,
+            snippets: snippets,
+          });
+    } else if ( req.session.who !== null && snippets.author !== req.session.who.username) {
       res.render('home', {
-        firstTime: true,
-        member: req.session.who,
+          firstTime: true,
+          firstname: req.session.who.firstname,
+        })
+      console.log(req.session.who.firstname);
+    } else {
+      res.render('login', {
+        loginError: true,
       });
     }
-  }
+  });
+
 });
 
 /* ******** CREATE NEW SNIPPET ******** */
 // display form get route
 app.get('/new', function (req, res) {
-  res.render('new', {
-    snippets: snippets,
-  });
+  res.render('new');
 });
 
 // post route for form
 app.post('/new', function (req, res) {
 
-  // set up snippet
-  let snippet = ({
+  Snippets.create({
     title: req.body.title,
-    code: req.body.code,
-    notes: req.body.notes,
-    language: req.body.language,
-    tags: req.body.tags,
     author: req.session.who.username,
-  });
-
-  snippets.push(snippet);
-  console.log(snippets);
-
-  res.render('new', {
-    newSnippet: true,
-    snippet: snippet,
+    language: req.body.language,
+    code: req.body.code,
+    tags: req.body.tags,
+    notes: req.body.notes,
   })
+    .then(function(snippets) {
+      res.render('new', {
+        newSnippet: true,
+        snippet: snippets,
+      });
+      console.log(snippets);
+      console.log(req.session.who.username);
+    })
 });
 
 /* ******** DISPLAY LIST OF ALL SNIPPETS ******** */
 app.get('/explore', function (req, res) {
-  res.render('display', {
-    snippets: snippets,
-  });
+  Snippets.find()
+  .then(function(snippets, err) {
+    if (req.session.who !== null) {
+      res.render('display', {
+        snippets: snippets,
+      });
+    } else if (err) {
+      console.log(err);
+      res.redirect('/');
+    }
+  })
 });
 
 /* ******** SEE LIST OF SNIPPETS FOR LANGUAGE ******** */
@@ -167,18 +154,15 @@ app.get('/language', function (req, res) {
 app.post('/language', function (req, res) {
   let query = req.body.language_search;
 
-  for (let i = 0; i < snippets.length; i++ ) {
-    if ( query.toLowerCase() === snippets[i].language.toLowerCase() ) {
-      console.log(query);
-      console.log('success!');
+  Snippets.find({language: new RegExp(query) })
+  .then(function (snippets){
+    if (req.session.who !== null) {
       res.render('display', {
         snippets: snippets,
       });
-    } else {
-      console.log(query);
-      res.send('error');
+      console.log('success');
     }
-  }
+  });
 });
 
 /* ******** SEE LIST OF SNIPPETS FOR TAG ******** */
@@ -191,18 +175,15 @@ app.get('/tags', function (req, res) {
 app.post('/tags', function (req, res) {
   let query = req.body.tags_search;
 
-  for (let i = 0; i < snippets.length; i++ ) {
-    if ( query.toLowerCase() === snippets[i].tags.toLowerCase() ) {
-      console.log(query);
-      console.log('success!');
+  Snippets.find({tags: new RegExp(query) })
+  .then(function (snippets){
+    if (req.session.who !== null) {
       res.render('display', {
         snippets: snippets,
       });
-    } else {
-      console.log(query);
-      res.send('error');
+      console.log('success');
     }
-  }
+  });
 });
 
 /* ******** LOOK AT INDIVIDUAL SNIPPET ******** */

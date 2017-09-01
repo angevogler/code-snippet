@@ -17,7 +17,7 @@
     </header>
 
     {{ #hasSnippets }}
-    <h1>Welcome back {{ member.firstName }}!</h1>
+    <h1>Welcome back {{ firstname }}!</h1>
 
     <div>
       <h2>Your Snippets</h2>
@@ -41,7 +41,7 @@
     {{ /hasSnippets}}
 
     {{ #firstTime }}
-    <h1>Welcome {{ member.firstName }}</h1>
+    <h1>Welcome {{ firstname }}</h1>
     <h2>Get started here!</h2>
     <div>
       <a href="/new">
