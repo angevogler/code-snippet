@@ -69,7 +69,7 @@ app.post('/register', function (req, res) {
       req.session.who = members;
       console.log(req.session.who);
       console.log('registration successful');
-      res.redirect('/home');
+      res.redirect('/login');
     })
     .catch(function (err) {
       console.log('registration failed');
@@ -82,24 +82,31 @@ app.post('/register', function (req, res) {
 app.get('/home', function (req, res) {
   Snippets.find({ author: req.session.who.username })
     .then(function (snippets) {
-    if ( req.session.who !== null && snippets[0].author === req.session.who.username) {
-          res.render('home', {
-            hasSnippets: true,
-            snippets: snippets,
-          });
-    } else if ( req.session.who !== null && snippets.author !== req.session.who.username) {
+      if ( req.session.who !== null && snippets.author !== req.session.who.username) {
       res.render('home', {
           firstTime: true,
           firstname: req.session.who.firstname,
         })
       console.log(req.session.who.firstname);
-    } else {
+    } else if ( req.session.who !== null && snippets[0].author === req.session.who.username) {
+            res.render('home', {
+              hasSnippets: true,
+              snippets: snippets,
+            });
+    }
+    else {
       res.render('login', {
         loginError: true,
       });
     }
   });
 
+});
+
+// logout get route
+app.get('/logout', function (req, res) {
+  req.session.destroy
+  res.redirect('/');
 });
 
 /* ******** CREATE NEW SNIPPET ******** */
@@ -187,13 +194,16 @@ app.post('/tags', function (req, res) {
 });
 
 /* ******** LOOK AT INDIVIDUAL SNIPPET ******** */
-// app.get('/title/:id', function (req, res) {
-//   req.params.id = snippets.title;
-//
-//   res.render('display', {
-//
-//   })
-// });
+app.get('/title/:id', function (req, res) {
+  // req.params.id = req.body.title;
+
+  Snippets.findOne({ title: req.params.id })
+  .then(function(snippets) {
+    res.render('display', {
+      snippets: snippets,
+    });
+  })
+});
 
 
 // start server
